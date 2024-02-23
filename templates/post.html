@@ -1,0 +1,87 @@
+
+{% include "header.html" %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <!-- Post comments -->
+                <ul id="comments" class="list-group list-group-flush">
+                    <li class="list-group-item disabled text-break action" aria-disabled="true">
+                        <h2>{{post.title}}</h2>
+                        <h4>{{post.subtitle}}</h4>
+                    </li>
+                    {% for comment in comments %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start text-break bg-transparent">
+                            <div class="align-baseline">
+                                <img src="{{ url_for('static', filename='logo.png') }}" class="logo-user" alt="User Logo">
+                                {{ comment.content }}
+                                <br><br><br>
+                                <span class="date sub-text">@{{comment.commenter.name}}</span>
+                            </div>
+                            <span class="badge text-bg-primary bg-dark rounded-pill">{{ comment.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+                            <div class="dropdown">
+                              <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="true">
+
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Modifier</a></li>
+                                <li><a class="dropdown-item" href="#">Supprimer</a></li>
+                                <li><a class="dropdown-item" href="#">Aimer</a></li>
+                              </ul>
+                            </div>
+                        </li>
+                        <br>
+                    {% endfor %}
+                </ul>
+                <!-- Chat Input Form -->
+                <form id="form" class="mt-3">
+                    <div class="control-group">
+                        <div class="form-group col-xs-12 floating-label-form-group controls">
+                            <div id="validationMessage" class="text-danger mt-2"></div>
+                            <textarea id="input" class="form-control text-break" rows="5" autocomplete="off" required></textarea>
+                            <button class="btn btn-dark" type="button" id="sendButton">Comment</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+     <!-- scripts in post.html -->
+    <script>
+        function validateForm() {
+            var postTitle = $('#input').val();
+
+            if (postTitle) {
+                // If validation passes, clear the validation message and return true to allow form submission
+                $('#validationMessage').html('');
+                return true;
+            } else {
+                // If validation fails, display a validation message and return false to prevent form submission
+                $('#validationMessage').html('Please add something.');
+                return false;
+            }
+        }
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        socket.on('comment', function(commentData) {
+            // Replace new lines with <br> tags
+            var formattedComment = commentData.content.replace(/\n/g, '<br>');
+            var logoHTML = '<img src="{{ url_for('static', filename='logo.png') }}" class="logo-user" alt="User Logo">';
+           // Append the new comment to the list
+        $('#comments').append($('<li class="list-group-item d-flex justify-content-between align-items-start text-break bg-transparent">')
+            .html('<div class="align-baseline">' + logoHTML + formattedComment + '<br><br><br><span class="date sub-text">@{{current_user.name}}</span></div><span class="badge text-bg-primary bg-dark rounded-pill">' + commentData.timestamp + '</span>'));
+    });
+
+        $(function() {
+            $('#sendButton').click(function() {
+                var comment = $('#input').val();
+                var post_id = {{ post.id }};  // Assuming you have access to post.id in your template
+                if (validateForm()) {
+                    socket.emit('comment', { content: comment, post_id: post_id });
+                    $('#input').val('');
+                }
+            });
+        });
+    </script>
+
+{% include "footer.html" %}

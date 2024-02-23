@@ -1,0 +1,46 @@
+{% include "header.html" %}
+    <div class="container mt-4">
+        <div class="row">
+                 <main class="px-3">
+                    {% if current_user.is_authenticated %}
+                      <h3>It's a pleasure to have you on board </h3>
+                      {% if current_user.id == 1 %}
+                        <a href="{{ url_for('contact') }}" class="btn btn-lg btn-white fw-bold border-gray bg-white">Security</a>
+                      {% endif %}
+                    {% else %}
+                      <h1>Bienvenue sur notre site de chat anonyme !</h1>
+                    {% endif %}
+                     <p class="d-inline-flex gap-1">
+                          <a class="btn btn-warning btn-sm" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
+                            A lire...
+                          </a>
+                     </p>
+                    <div class="collapse" id="collapseExample">
+                      <div class="card card-body bg-transparent">
+                        <p class="lead">
+                            <strong>
+                                Ici, vous pouvez librement partager vos pensées, idées et expériences en toute discrétion.
+                                Notre plateforme garantit l'anonymat de chaque utilisateur, offrant ainsi un espace sûr pour
+                                des discussions ouvertes et honnêtes. Créez un compte ou connectez vous, explorez
+                                les conversations passionnantes, ou lancez-vous en partageant votre propre histoire.
+
+                                Rejoignez notre communauté sans jugement, où l'expression libre et le respect mutuel
+                                sont les maîtres mots. Nous sommes ravis de vous accueillir à bord et nous avons hâte de
+                                voir les échanges fascinants qui naîtront ici. Profitez de votre expérience sur notre site
+                                de chat anonyme !
+                            </strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <p class="lead">
+                      {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('get_posts') }}" class="btn btn-lg btn-light fw-bold border-white bg-white">See Available Posts</a>
+                      {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-lg btn-light fw-bold border-white bg-white">Login or Register</a>
+                      {% endif %}
+                    </p>
+                 </main>
+        </div>
+    </div>
+{% include "footer.html" %}

@@ -1,0 +1,26 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% include "header.html" %}
+    <div class="container mt-4">
+            <div class="row">
+                <div class="col-md-6 offset-md-3">
+                <main class="form-signin w-100 m-auto">
+                    {% if not edit %}
+                        <h3>Nous sommes ravis de vous accueillir à bord !</h3>
+                    {% else %}
+                        <h3>Modifier votre Compte</h3>
+                    {% endif %}
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                          <ul class="messages">
+                            {% for message in messages %}
+                              <li style="color:red">{{ message }}</li>
+                            {% endfor %}
+                          </ul>
+                        {% endif %}
+                    {% endwith %}
+                    {{ wtf.quick_form(form, novalidate=True, button_map={"submit": "primary btn-sm"}) }}
+                </main>
+            </div>
+        </div>
+    </div>
+  {% include "footer.html" %}
