@@ -49,7 +49,7 @@ def admin_only(fa):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(50), nullable=False)
+    password = db.Column(db.String(500), nullable=False)
     posts = db.relationship('Post', back_populates='author', lazy=True)
     comments = db.relationship('Comment', back_populates='commenter', lazy=True)
 
