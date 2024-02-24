@@ -17,17 +17,17 @@
                         </div>
                       </header>
                     <!-- Chat posts -->
-                    <ol id="posts" class="list-group list-group-numbered">
+                    <ol id="posts" class="list-group list-group-unnumbered">
                         {% for post in posts %}
                             <li class="list-group-item d-flex justify-content-between align-items-start text-break">
                                 <div class="ms-2 me-auto">
                                       <div class="fw-bold">
                                           <a href="{{ url_for('post', post_id=post.id) }}">
-                                            {{ post.title }}
+                                            <h3>{{ post.title }}</h3>
                                           </a>
                                       </div>
                                       {{ post.subtitle }} <br><br>
-                                      <p class="post-meta">Poste par
+                                      <p class="post-meta">Posté par
                                           {% if current_user == post.author: %}
                                             " Vous "
                                           {% else %}
