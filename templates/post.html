@@ -68,7 +68,7 @@
                 return false;
             }
         }
-        var socket = io.connect('https://' + document.domain + ':' + location.port);
+        var socket = io.connect('https://incognito-chat-8a6y.onrender.com/');
 
         socket.on('comment', function(commentData) {
             // Replace new lines with <br> tags
