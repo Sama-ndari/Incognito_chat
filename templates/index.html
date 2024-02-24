@@ -35,9 +35,9 @@
 
                     <p class="lead">
                       {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('get_posts') }}" class="btn btn-lg btn-light fw-bold border-white bg-white">See Available Posts</a>
+                        <a href="{{ url_for('get_posts') }}" class="btn btn-lg btn-light fw-bold border-white bg-white">Voir les Posts disponible</a>
                       {% else %}
-                        <a href="{{ url_for('login') }}" class="btn btn-lg btn-light fw-bold border-white bg-white">Login or Register</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-lg btn-light fw-bold border-white bg-white">Se Connecter ou Créer un Compte</a>
                       {% endif %}
                     </p>
                  </main>
