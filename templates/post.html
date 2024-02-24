@@ -5,10 +5,8 @@
             <div class="col-md-6 offset-md-3">
                 <!-- Post comments -->
                 <ul id="comments" class="list-group list-group-flush">
-                    <li class="list-group-item disabled text-break action" aria-disabled="true">
-                        <h2>{{post.title}}</h2>
-                        <h4>{{post.subtitle}}</h4>
-                    </li>
+                    <h1><strong>{{post.title}}</strong></h1>
+                    <h3>{{post.subtitle}}</h3>
                     {% for comment in comments %}
                         <li class="list-group-item d-flex justify-content-between align-items-start text-break bg-transparent">
                             <div class="align-baseline">
@@ -38,7 +36,7 @@
                         <div class="form-group col-xs-12 floating-label-form-group controls">
                             <div id="validationMessage" class="text-danger mt-2"></div>
                             <textarea id="input" class="form-control text-break" rows="5" autocomplete="off" required></textarea>
-                            <button class="btn btn-dark" type="button" id="sendButton">Comment</button>
+                            <button class="btn btn-dark" type="button" id="sendButton">Commenter</button>
                         </div>
                     </div>
                 </form>
@@ -57,7 +55,7 @@
                 return true;
             } else {
                 // If validation fails, display a validation message and return false to prevent form submission
-                $('#validationMessage').html('Please add something.');
+                $('#validationMessage').html('SVP Saisissez quelque chose.');
                 return false;
             }
         }
