@@ -57,7 +57,7 @@ class User(UserMixin, db.Model):
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200))
-    subtitle = db.Column(db.String(200))
+    subtitle = db.Column(db.String(2000))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     author = db.relationship('User', back_populates='posts')  # Include the User object

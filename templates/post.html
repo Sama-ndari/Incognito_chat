@@ -6,7 +6,16 @@
                 <!-- Post comments -->
                 <ul id="comments" class="list-group list-group-flush">
                     <h1><strong>{{post.title}}</strong></h1>
-                    <h3>{{post.subtitle}}</h3>
+                    <p class="d-inline-flex gap-1">
+                          <a class="btn btn-dark btn-sm" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
+                            Details...
+                          </a>
+                     </p>
+                    <div class="collapse" id="collapseExample">
+                      <div class="card card-body bg-transparent">
+                        <h3 class="lead">{{post.subtitle}}</h3>
+                      </div>
+                    </div>
                     {% for comment in comments %}
                         <li class="list-group-item d-flex justify-content-between align-items-start text-break bg-transparent">
                             <div class="align-baseline">
