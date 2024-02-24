@@ -13,6 +13,7 @@ import os
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('MY_SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('MY_DATABASE_URL')
+app.config['DEBUG'] = True
 # app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
