@@ -82,7 +82,7 @@
                     return false;
                 }
             }
-            //var socket = io.connect('https://incognito-chat-8a6y.onrender.com/');
+            var socket = io.connect('https://incognito-chat-8a6y.onrender.com/');
 
             socket.on('post', function(post_data) {
                 // Replace new lines with <br> tags
