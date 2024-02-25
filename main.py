@@ -22,31 +22,6 @@ db = SQLAlchemy(app)
 Bootstrap(app)
 
 
-# to track users logins
-login_manager = LoginManager()
-login_manager.init_app(app)
-
-
-# charger un utilisateur à partir de la base de données en utilisant son identifiant
-# loading the current user
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(user_id)
-
-
-# Create admin-only decorator
-def admin_only(fa):
-    @wraps(fa)  # pour préserver le nom et la documentation de la fonction originale dans la fonction décorée
-    def decorated_function(*args, **kwargs):
-        # If id is not 1 then return abort with 403 error
-        if current_user.id != 1:
-            return abort(403)
-        # Otherwise continue with the route function
-        return fa(*args, **kwargs)
-
-    return decorated_function
-
-
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
@@ -80,6 +55,30 @@ class Comment(db.Model):
 
 with app.app_context():
     db.create_all()
+
+# to track users logins
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+# charger un utilisateur à partir de la base de données en utilisant son identifiant
+# loading the current user
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(user_id)
+
+
+# Create admin-only decorator
+def admin_only(fa):
+    @wraps(fa)  # pour préserver le nom et la documentation de la fonction originale dans la fonction décorée
+    def decorated_function(*args, **kwargs):
+        # If id is not 1 then return abort with 403 error
+        if current_user.id != 1:
+            return abort(403)
+        # Otherwise continue with the route function
+        return fa(*args, **kwargs)
+
+    return decorated_function
 
 
 @app.route('/')
