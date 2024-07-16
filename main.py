@@ -7,8 +7,8 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, cur
 from forms import *
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_bootstrap import Bootstrap
-import os
-import pyrebase
+# import os
+# import pyrebase
 
 
 app = Flask(__name__)
