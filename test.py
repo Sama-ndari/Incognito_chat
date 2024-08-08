@@ -1,31 +1,61 @@
-import hashlib
-import psycopg2
-from flask import Flask, render_template, redirect, url_for, flash, abort
-from flask_bootstrap import Bootstrap
-from flask_ckeditor import CKEditor
-from datetime import date
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, redirect, url_for, flash, abort, request
+from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from functools import wraps
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from forms import *
-from functools import wraps
-import os
-# from flask_socketio import SocketIO, emit
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_bootstrap import Bootstrap
+
 
 app = Flask(__name__)
-# app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+# app.config['SECRET_KEY'] = os.environ.get('MY_SECRET_KEY')
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('MY_DATABASE_URL')
+# app.config['DEBUG'] = True
+# app.config['SESSION_PROTECTION'] = 'strong'
 
 app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
-# socketio = SocketIO(app)
-ckeditor = CKEditor(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+socketio = SocketIO(app)
+db = SQLAlchemy(app)
 Bootstrap(app)
 
-# CONNECT TO DB
-# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(500), nullable=False)
+    posts = db.relationship('Post', back_populates='author', lazy=True)
+    comments = db.relationship('Comment', back_populates='commenter', lazy=True)
+
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200))
+    subtitle = db.Column(db.String(250))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    author = db.relationship('User', back_populates='posts')  # Include the User object
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comments = db.relationship('Comment', back_populates="parent_post", lazy=True)
+
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(200))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    commenter = db.relationship('User', back_populates='comments')  # Include the User object
+
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    parent_post = db.relationship('Post', back_populates='comments')  # Include the Post object
+
+
+with app.app_context():
+    db.create_all()
 
 # to track users logins
 login_manager = LoginManager()
@@ -40,133 +70,56 @@ def load_user(user_id):
 
 
 # Create admin-only decorator
-def admin_only(f):
-    @wraps(f)  # pour préserver le nom et la documentation de la fonction originale dans la fonction décorée
+def admin_only(fa):
+    @wraps(fa)  # pour préserver le nom et la documentation de la fonction originale dans la fonction décorée
     def decorated_function(*args, **kwargs):
         # If id is not 1 then return abort with 403 error
         if current_user.id != 1:
             return abort(403)
         # Otherwise continue with the route function
-        return f(*args, **kwargs)
+        return fa(*args, **kwargs)
 
     return decorated_function
 
 
-# CONFIGURE TABLES
-class User(UserMixin, db.Model):
-    __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(250), nullable=False)
-    email = db.Column(db.String(250), unique=True, nullable=False)
-    password = db.Column(db.String(250), nullable=False)
-    # This will act like a List of BlogPost objects attached to each User.
-    # The "author" refers to the author property in the BlogPost class.
-    posts = relationship("BlogPost", back_populates="author")
-    # this will act like a List of Comments objects attached to each user
-    comments = relationship("Comment", back_populates="comment_author")
-
-
-class BlogPost(db.Model):
-    __tablename__ = "blog_posts"
-    id = db.Column(db.Integer, primary_key=True)
-    # Create Foreign Key, "users.id" the users refers to the tablename of User.
-    author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    # Create reference to the User object, the "posts" refers to the posts protperty in the User class.
-    author = relationship("User", back_populates="posts")
-
-    title = db.Column(db.String(250), unique=True, nullable=False)
-    subtitle = db.Column(db.String(250), nullable=False)
-    date = db.Column(db.String(250), nullable=False)
-    body = db.Column(db.Text, nullable=False)
-    img_url = db.Column(db.String(250), nullable=False)
-
-    comments = relationship("Comment", back_populates="parent_post")
-
-
-class Comment(db.Model):
-    __tablename__ = "comments"
-    id = db.Column(db.Integer, primary_key=True)
-    author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    comment_author = relationship("User", back_populates="comments")
-
-    post_id = db.Column(db.Integer, db.ForeignKey("blog_posts.id"))
-    parent_post = relationship("BlogPost", back_populates="comments")
-
-    text = db.Column(db.Text, nullable=False)
-
-
-with app.app_context():
-    db.create_all()
-
-
-# Fonction personnalisée pour le hachage MD5 pour le gravatar images
-@app.template_filter('md5')
-def md5_filter(value):
-    return hashlib.md5(value.encode('utf-8')).hexdigest()
-
-
-# to emit comments in real time to all users
-# @socketio.on('comment_added')
-# def handle_comment_added(comment):
-#     comment_data = {
-#         'author': comment['author'],
-#         'text': comment['text'],
-#         'author_email': comment['author_email'],
-#         'gravatar_url': get_gravatar_url(comment['author_email'])
-#     }
-#     print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-#     emit('comment_added', comment_data, broadcast=True)
-#
-#
-# def get_gravatar_url(email):
-#     email_hash = hashlib.md5(email.encode('utf-8')).hexdigest()
-#     size = 200
-#     default_image = 'identicon'
-#     return f'https://www.gravatar.com/avatar/{email_hash}?d={default_image}&s={size}'
-
-
 @app.route('/')
-def get_all_posts():
-    if not hasattr(get_all_posts, 'is_called'):
+def index():
+    if not hasattr(index, 'is_called'):
         # First time the function is called
-        setattr(get_all_posts, 'is_called', True)
+        setattr(index, 'is_called', True)
         user = None
     else:
         user = current_user
-    posts = BlogPost.query.all()
-    return render_template("index.html", all_posts=posts, current_user=user)
+    return render_template('index.html', current_user=user)
+
+# ****************************  USER   ****************************
 
 
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+def login():  # login
     form = LoginForm()
     if form.validate_on_submit():
-        email = form.email.data
+        name = form.name.data
         password = form.password.data
 
-        user = User.query.filter_by(email=email).first()
-        # Email doesn't exist
+        user = User.query.filter_by(name=name).first()
+        # Name doesn't exist
         if not user:
-            flash("That email does not exist, please try again.")
+            flash("Ce Pseudo n'existe pas, veuillez réessayer.")
         # Password incorrect
         elif not check_password_hash(user.password, password):
-            flash('Password incorrect, please try again.')
+            flash('Mot de passe incorrect, veuillez réessayer.')
         else:
             login_user(user)
-            return redirect(url_for('get_all_posts'))
-    return render_template("login.html", form=form, current_user=current_user)
+            return redirect(url_for('get_posts'))
+    return render_template("login.html", form=form)
 
 
-@app.route('/logout')
+@app.route('/logout')  # logout
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('get_all_posts'))
-
-
-@app.route("/about")
-def about():
-    return render_template("about.html", current_user=current_user)
+    return redirect(url_for('index'))
 
 
 @app.route("/contact")
@@ -177,91 +130,12 @@ def contact():
                            users=users,
                            number_user=User.query.count(),
                            number_comment=Comment.query.count(),
-                           number_post=BlogPost.query.count())
+                           number_post=Post.query.count())
 
 
-#  ....................   POST   ...........................
-
-
-@app.route("/new-post", methods=['GET', 'POST'])
-@login_required  # only user will add blogs
-def add_new_post():
-    form = CreatePostForm(
-        img_url='https://static.vecteezy.com/system/resources/thumbnails/030/353/225/small_2x/beautiful-night-sky-background-ai-generated-photo.jpg'
-    )
-    if form.validate_on_submit():
-        new_post = BlogPost(
-            title=form.title.data,
-            subtitle=form.subtitle.data,
-            body=form.body.data,
-            img_url=form.img_url.data,
-            author=current_user,
-            date=date.today().strftime("%B %d, %Y")
-        )
-        db.session.add(new_post)
-        db.session.commit()
-        return redirect(url_for("get_all_posts"))
-    return render_template("make-post.html", form=form, edit=False)
-
-
-@app.route("/post/<int:post_id>", methods=['GET', 'POST'])
-def show_post(post_id):
-    requested_post = BlogPost.query.get(post_id)
-    form = CommentForm()
-    if form.validate_on_submit():
-        if not current_user.is_authenticated:
-            flash("You need to login or register to comment.")
-            return redirect(url_for("login"))
-
-        new_comment = Comment(
-            text=form.comment.data,
-            comment_author=current_user,
-            parent_post=requested_post
-        )
-        db.session.add(new_comment)
-        db.session.commit()
-        form.comment.data = ''
-    return render_template("post.html", form=form, post=requested_post, current_user=current_user)
-
-
-@app.route("/edit-post/<int:post_id>", methods=['GET', 'POST'])
-@login_required
-def edit_post(post_id):
-    post = BlogPost.query.get(post_id)
-    if post.author != current_user and current_user.id != 1:
-        return redirect(url_for('get_all_posts'))
-    edit_form = CreatePostForm(
-        title=post.title,
-        subtitle=post.subtitle,
-        img_url=post.img_url,
-        body=post.body
-    )
-    if edit_form.validate_on_submit():
-        post.title = edit_form.title.data
-        post.subtitle = edit_form.subtitle.data
-        post.img_url = edit_form.img_url.data
-        post.author = current_user
-        post.body = edit_form.body.data
-        db.session.commit()
-        return redirect(url_for("show_post", post_id=post.id))
-    return render_template("make-post.html", form=edit_form, edit=True)
-
-
-@app.route("/delete/<int:post_id>")
-@login_required
-def delete_post(post_id):
-    post_to_delete = BlogPost.query.get(post_id)
-    if post_to_delete.author == current_user or current_user.id == 1:
-        # deleting all the comments in the post to delete
-        for comment in Comment.query.filter_by(parent_post=post_to_delete).all():
-            db.session.delete(comment)
-            db.session.commit()
-        db.session.delete(post_to_delete)
-        db.session.commit()
-    return redirect(url_for('get_all_posts'))
-
-
-#  ....................   USER   ...........................
+@app.route("/setting")
+def setting():
+    return render_template("Settings.html", current_user=current_user)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -273,14 +147,10 @@ def register():
             method='pbkdf2:sha256',
             salt_length=8
         )
-        if User.query.filter_by(email=form.email.data).first():
-            flash("You've already signed up with that email,login instead.")
-            return redirect(url_for('login'))
         if User.query.filter_by(name=form.name.data).first():
-            flash('Name unavailable,already taken.')
+            flash("Pseudo non disponible, déjà pris.")
             return redirect(url_for('register'))
         new_user = User(
-            email= form.email.data,
             name=form.name.data,
             password=hash_and_salted_password,
         )
@@ -288,7 +158,7 @@ def register():
         db.session.commit()
         # Log in and authenticate user after adding details to database.
         login_user(new_user)
-        return redirect(url_for('get_all_posts'))
+        return redirect(url_for('get_posts'))
     return render_template("register.html", form=form, current_user=current_user, edit=False)
 
 
@@ -296,13 +166,13 @@ def register():
 @login_required
 def edit_user(user_id):
     if user_id == 1:
-        return redirect(url_for('get_all_posts'))
+        return redirect(url_for('get_posts'))
     if current_user.id != 1 and current_user.id != user_id:
-        return redirect(url_for('get_all_posts'))
+        return redirect(url_for('get_posts'))
     user_to_edit = User.query.get(user_id)
     form = RegisterForm(
-        email=user_to_edit.email,
-        name=user_to_edit.name
+        name=user_to_edit.name,
+        password=user_to_edit.password
     )
     if form.validate_on_submit():
         hash_and_salted_password = generate_password_hash(
@@ -312,12 +182,11 @@ def edit_user(user_id):
         )
         user_to_edit.name = form.name.data
         user_to_edit.password = hash_and_salted_password
-        user_to_edit.email = form.email.data
         db.session.commit()
         logout_user()  # you first log out the actual user
         # Log in and authenticate user after adding details to database.
         login_user(user_to_edit)
-        return redirect(url_for('get_all_posts'))
+        return redirect(url_for('get_posts'))
     return render_template("register.html", form=form, current_user=current_user, edit=True)
 
 
@@ -325,31 +194,31 @@ def edit_user(user_id):
 @login_required
 def delete_user(user_id):
     if user_id == 1:
-        return redirect(url_for('get_all_posts'))
+        return redirect(url_for('get_posts'))
     if user_id == current_user.id or current_user.id == 1:
         user_to_delete = User.query.get(user_id)
         # deleting all the comments of the user to delete
-        for comment in Comment.query.filter_by(comment_author=user_to_delete).all():
+        for comment in Comment.query.filter_by(commenter=user_to_delete).all():
             db.session.delete(comment)
             db.session.commit()
         # deleting all the posts of the user
-        for post in BlogPost.query.filter_by(author=user_to_delete).all():
+        for the_post in Post.query.filter_by(author=user_to_delete).all():
             # deleting all comments of each post
-            for comment in Comment.query.filter_by(parent_post=post).all():
+            for comment in Comment.query.filter_by(parent_post=the_post).all():
                 db.session.delete(comment)
                 db.session.commit()
-            db.session.delete(post)
+            db.session.delete(the_post)
             db.session.commit()
         db.session.delete(user_to_delete)
         db.session.commit()
-    return redirect(url_for('get_all_posts'))
+    return redirect(url_for('get_posts'))
 
 
 @app.route("/reset-user/<int:user_id>")
 @admin_only  # only Admins will reset
 def reset_user(user_id):
     if user_id == 1:
-        return redirect(url_for('get_all_posts'))
+        return redirect(url_for('get_posts'))
     user = User.query.get(user_id)
     hash_and_salted_password = generate_password_hash(
         '0000',
@@ -358,41 +227,121 @@ def reset_user(user_id):
     )
     user.password = hash_and_salted_password
     db.session.commit()
-    return redirect(url_for('get_all_posts'))
+    return redirect(url_for('get_posts'))
 
 
-#  ....................   COMMENT   ...........................
+# ****************************  POST   ****************************
+
+
+@app.route('/posts', methods=['GET', 'POST'])  # get all posts or create a post
+@login_required
+def get_posts():
+    if request.method == 'POST':
+        new_post = Post(title=request.form['title'],
+                        subtitle=request.form['subtitle'],
+                        user_id=current_user.id)
+
+        if db.session.query(Post).filter_by(
+                title=request.form['title'],
+                subtitle=request.form['subtitle'],
+                user_id=current_user.id).first():
+            flash("Post éxiste déja")
+            return redirect(url_for('get_posts'))  # if post exists no submit
+
+        db.session.add(new_post)
+        db.session.commit()
+        return redirect(url_for('get_posts'))
+    posts = Post.query.all()
+    return render_template('all_posts.html', posts=posts, current_user=current_user, edit=False)
+
+
+@app.route("/delete_post/<int:post_id>")
+@login_required
+def delete_post(post_id):
+    print(post_id)
+    post_author_id = Post.query.filter_by(id=post_id).first().user_id
+    if post_author_id == current_user.id or current_user.id == 1:
+        post_to_delete = Post.query.filter_by(id=post_id).first()
+        # deleting all the comments of the post to delete
+        for comment in Comment.query.filter_by(parent_post=post_to_delete).all():
+            db.session.delete(comment)
+            db.session.commit()
+        db.session.delete(post_to_delete)
+        db.session.commit()
+    return redirect(url_for('get_posts'))
+
+
+@app.route('/post/<int:post_id>', methods=['GET', 'POST'])  # get one post or create a comment
+@login_required
+def post(post_id):
+    if post_id == 0:
+        posts = Post.query.count()
+        return render_template('refresh.html', posts=posts)
+
+    the_post = Post.query.get(post_id)
+    if request.method == 'POST':
+        new_comment = Comment(
+            content=request.form['comment'],
+            commenter=current_user,
+            parent_post=the_post
+        )
+        if db.session.query(Comment).filter_by(
+                content=request.form['comment'],
+                commenter=current_user,
+                parent_post=the_post).first():
+            flash('2fois la mm chose nooon')
+            return redirect(url_for('post', post_id=post_id))  # if comment exists no submit
+        db.session.add(new_comment)
+        db.session.commit()
+        return redirect(url_for('post', post_id=post_id))
+    return render_template('post.html', post=the_post, current_user=current_user)
+
+
+# @app.route("/edit-post/<int:post_id>")
+# @login_required
+# def edit_post(post_id):
+#     if request.method == 'POST':
+#         new_post = Post(title=request.form['title'],
+#                         subtitle=request.form['subtitle'],
+#                         user_id=current_user.id)
+#         db.session.add(new_post)
+#         db.session.commit()
+#         return redirect(url_for('get_posts'))
+#     posts = Post.query.all()
+#     return render_template('all_posts.html', posts=posts, current_user=current_user, edit=True)
+
+# ***************************** COMMENTS *****************
 
 @app.route("/delete-comment/<int:comment_id>")
 @login_required
 def delete_comment(comment_id):
-    comment_to_delete = Comment.query.get(comment_id)
-    if current_user.id != 1 and current_user.id != comment_to_delete.comment_author.id:
-        return redirect(url_for('get_all_posts'))
-    post = comment_to_delete.post_id
+    comment_to_delete = Comment.query.filter_by(id=comment_id).first()
+    post_id = comment_to_delete.post_id
+    if current_user.id != 1 and current_user.id != comment_to_delete.commenter.id:
+        return redirect(url_for('post', post_id=post_id))
     db.session.delete(comment_to_delete)
     db.session.commit()
-    return redirect(url_for('show_post', post_id=post))
+    return redirect(url_for('post', post_id=post_id))
 
 
-@app.route("/edit-comment/<int:comment_id>", methods=['GET', 'POST'])
-@login_required
-def edit_comment(comment_id):
-    requested_comment = Comment.query.get(comment_id)
-    if current_user.id != 1 and current_user.id != requested_comment.comment_author.id:
-        return redirect(url_for('get_all_posts'))
-    post = requested_comment.parent_post
-    form = CommentForm(
-        comment=requested_comment.text
-    )
-    print(requested_comment.text)
-    if form.validate_on_submit():
-        requested_comment.text = form.comment.data
-        db.session.commit()
-        return redirect(url_for('show_post', post_id=post.id))
-    return render_template("post.html", form=form, post=post, current_user=current_user, edit=True)
+# @app.route("/edit-comment/<int:comment_id>", methods=['GET', 'POST'])
+# @login_required
+# def edit_comment(comment_id):
+#     requested_comment = Comment.query.get(comment_id)
+#     if current_user.id != 1 and current_user.id != requested_comment.comment_author.id:
+#         return redirect(url_for('get_all_posts'))
+#     post = requested_comment.parent_post
+#     form = CommentForm(
+#         comment=requested_comment.text
+#     )
+#     print(requested_comment.text)
+#     if form.validate_on_submit():
+#         requested_comment.text = form.comment.data
+#         db.session.commit()
+#         return redirect(url_for('show_post', post_id=post.id))
+#     return render_template("post.html", form=form, post=post, current_user=current_user, edit=True)
 
 
-if __name__ == "__main__":
-    # socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+if __name__ == '__main__':
     app.run(debug=True)
+

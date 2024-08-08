@@ -8,7 +8,7 @@
         <div class="col-lg-8 col-md-10 mx-auto">
           <div class="page-heading">
             {% if current_user.id == 1 %}
-              <h2> User: {{number_user}} </h2>
+              <h2> Users: {{number_user}} </h2>
               <h2> Comments: {{number_comment}} </h2>
               <h2> Posts: {{number_post}} </h2>
             {% else %}
@@ -31,16 +31,38 @@
         <!-- WARNING: Some web hosts do not allow emails to be sent through forms to common mail hosts like Gmail or Yahoo. It's recommended that you use a private domain email address! -->
         <!-- To use the contact form, your site must be on a live web host with PHP! The form will not work locally! -->
         {% if current_user.id == 1 %}
-          {% for user in users %}
-            {% if user.id > 1 %}
-              <h3>
-                <a href="{{url_for('reset_user', user_id=user.id) }}">✍🏾</a>
-                {{user.id}} . {{user.name}} ---- {{user.password}}
-                <a href="{{url_for('delete_user', user_id=user.id) }}">✘</a>
-              </h3>
-              <hr>
-            {% endif %}
-          {% endfor %}
+        <ol id="users" class="list-group list-group-flush">
+            {% for user in users %}
+                    <li class="list-group-item enabled text-break" aria-disabled="true">
+                        <h3>
+                          <a href="{{url_for('reset_user', user_id=user.id) }}">✍🏾</a>
+                          <strong>{{user.id}} . {{user.name}} ---- {{user.password}} </strong>
+                          <a href="{{url_for('delete_user', user_id=user.id) }}">✘</a>
+                        </h3>
+                        <ul id="comments" class="list-group ">
+                          <h4>Comments ... Post Name</h4>
+                            {% for message in user.comments %}
+                                    <li class="list-group-item disabled text-break" aria-disabled="true">
+                                        {{ message.content }} .... {{ message.parent_post.title }}
+                                    </li>
+                                    <br>
+                            {% endfor %}
+                        </ul>
+                        <hr>
+                        <ul id="posts" class="list-group ">
+                            <h4>Posts</h4>
+                            {% for post in user.posts %}
+                                    <li class="list-group-item disabled text-break" aria-disabled="true">
+                                        {{ post.title }} <br> {{ post.subtitle }}
+                                    </li>
+                                    <hr>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    <hr><br><hr>
+            {% endfor %}
+        </ol>
+
         {% else %}
 
           <form name="sentMessage" id="contactForm" novalidate>
