@@ -10,7 +10,8 @@
                             <div class="col-lg-8 col-md-10 mx-auto">
                               <div class="site-heading">
                                 <h1>Bienvenue {{current_user.name}}</h1>
-                                <span class="subheading">Un réel plaisir de vous avoir à bord !</span>
+                                <span class="subheading">Un réel plaisir de vous avoir à bord !   </span>
+                                <a class="btn btn-warning" href="#inputTitle">Créer poste</a>
                               </div>
                             </div>
                           </div>
@@ -45,21 +46,37 @@
                                   <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" href="{{ url_for('post', post_id=post.id) }}">Voir Post</a></li>
                                     <li><a class="dropdown-item" href="#">Modifier</a></li>
-                                    <li><a class="dropdown-item" href="#">Supprimer</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('delete_post', post_id=post.id) }}">Supprimer</a></li>
                                     <li><a class="dropdown-item" href="#">Aimer</a></li>
                                   </ul>
                                 </div>
                             </li>
                         {% endfor %}
                     </ol>
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                          <ul class="messages">
+                            {% for message in messages %}
+                              <li style="color:red">{{ message }}</li>
+                            {% endfor %}
+                          </ul>
+                        {% endif %}
+                    {% endwith %}
                     <!-- Post create Form -->
-                    <form id="form" class="mt-3" onsubmit="return validateForm()">
+                    <form id="form" method="POST" class="mt-3" action="{{ url_for('get_posts') }}">
                         <div class="control-group">
                             <div class="form-group col-xs-12 floating-label-form-group controls">
-                                <textarea id="inputTitle" class="form-control" placeholder="Enter a short Title" rows="1" autocomplete="off" required></textarea>
-                                <textarea id="inputSubtitle" class="form-control" placeholder="Enter a Subtitle" rows="4" autocomplete="off" ></textarea>
+                                <textarea id="inputTitle" name="title" class="form-control" placeholder="Enter a short Title" rows="1" autocomplete="off" required ></textarea>
+                                <textarea id="inputSubtitle" name="subtitle" class="form-control" placeholder="Enter a Subtitle" rows="4" autocomplete="off" ></textarea>
                                 <div id="validationMessage" class="text-danger mt-2"></div>
-                                <button class="btn btn-primary" type="button" id="sendButton">Créer Post</button>
+                                <button class="btn btn-primary" type="submit" id="sendButton">Créer Post</button>
+
+                                <button type="button" class="btn btn-warning btn-sm position-relative" id="refrech" onclick="window.location.reload();">
+                                  Reload New Posts
+                                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="message-count-badge">
+                                    ?
+                                  </span>
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -67,46 +84,5 @@
             </div>
         </div>
 
-        <script>
-            function validateForm() {
-                var postTitle = $('#inputTitle').val();
-                var postSubtitle = $('#inputSubtitle').val();
-
-                if (postTitle && postSubtitle) {
-                    // If validation passes, clear the validation message and return true to allow form submission
-                    $('#validationMessage').html('');
-                    return true;
-                } else {
-                    // If validation fails, display a validation message and return false to prevent form submission
-                    $('#validationMessage').html('SVP completez tout.');
-                    return false;
-                }
-            }
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
-
-            socket.on('post', function(post_data) {
-                // Replace new lines with <br> tags
-                var formattedMsg = post_data.title.replace(/\n/g, '<br>');
-                var subtitleMsg = post_data.subtitle.replace(/\n/g, '<br>');
-                $('#posts').append($('<li class="list-group-item d-flex justify-content-between align-items-start text-break">')
-                .html('<div class="ms-2 me-auto"><div class="fw-bold"><a href="{{ url_for("post", post_id='0') }}" ><h3>' + formattedMsg + '</h3></a></div>' + subtitleMsg + '</div><span class="badge text-bg-primary rounded-pill bg-danger">Veuillez rafraichir la page</span>'));
-                // Refresh the page
-                //location.reload();
-            });
-
-            $(function() {
-                $('#sendButton').click(function() {
-                    var postTitle = $('#inputTitle').val();
-                    var postSubtitle = $('#inputSubtitle').val();
-
-                    // Emit 'post' event only if form validation passes
-                    if (validateForm()) {
-                        socket.emit('post', { title: postTitle, subtitle: postSubtitle });
-                        $('#inputTitle').val('');
-                        $('#inputSubtitle').val('');
-                    }
-                });
-            });
-        </script>
 
 {% include "footer.html" %}
