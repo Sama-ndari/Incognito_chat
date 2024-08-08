@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, abort
+from flask import Flask, render_template, redirect, url_for, flash, abort, request
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -7,8 +7,6 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, cur
 from forms import *
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_bootstrap import Bootstrap
-# import os
-# import pyrebase
 
 
 app = Flask(__name__)
@@ -114,7 +112,7 @@ def login():  # login
         else:
             login_user(user)
             return redirect(url_for('get_posts'))
-    return render_template("login.html", form=form, current_user=current_user)
+    return render_template("login.html", form=form)
 
 
 @app.route('/logout')  # logout
@@ -235,62 +233,115 @@ def reset_user(user_id):
 # ****************************  POST   ****************************
 
 
-@app.route('/posts')  # get all posts
+@app.route('/posts', methods=['GET', 'POST'])  # get all posts or create a post
 @login_required
 def get_posts():
+    if request.method == 'POST':
+        new_post = Post(title=request.form['title'],
+                        subtitle=request.form['subtitle'],
+                        user_id=current_user.id)
+
+        if db.session.query(Post).filter_by(
+                title=request.form['title'],
+                subtitle=request.form['subtitle'],
+                user_id=current_user.id).first():
+            flash("Post éxiste déja")
+            return redirect(url_for('get_posts'))  # if post exists no submit
+
+        db.session.add(new_post)
+        db.session.commit()
+        return redirect(url_for('get_posts'))
     posts = Post.query.all()
-    return render_template('all_posts.html', posts=posts, current_user=current_user)
+    return render_template('all_posts.html', posts=posts, current_user=current_user, edit=False)
 
 
-@app.route('/post/<int:post_id>')  # get one post
+@app.route("/delete_post/<int:post_id>")
+@login_required
+def delete_post(post_id):
+    print(post_id)
+    post_author_id = Post.query.filter_by(id=post_id).first().user_id
+    if post_author_id == current_user.id or current_user.id == 1:
+        post_to_delete = Post.query.filter_by(id=post_id).first()
+        # deleting all the comments of the post to delete
+        for comment in Comment.query.filter_by(parent_post=post_to_delete).all():
+            db.session.delete(comment)
+            db.session.commit()
+        db.session.delete(post_to_delete)
+        db.session.commit()
+    return redirect(url_for('get_posts'))
+
+
+@app.route('/post/<int:post_id>', methods=['GET', 'POST'])  # get one post or create a comment
 @login_required
 def post(post_id):
     if post_id == 0:
         posts = Post.query.count()
         return render_template('refresh.html', posts=posts)
+
     the_post = Post.query.get(post_id)
-    comments = the_post.comments
-    return render_template('post.html', post=the_post, comments=comments, current_user=current_user)
+    if request.method == 'POST':
+        new_comment = Comment(
+            content=request.form['comment'],
+            commenter=current_user,
+            parent_post=the_post
+        )
+        if db.session.query(Comment).filter_by(
+                content=request.form['comment'],
+                commenter=current_user,
+                parent_post=the_post).first():
+            flash('2fois la mm chose nooon')
+            return redirect(url_for('post', post_id=post_id))  # if comment exists no submit
+        db.session.add(new_comment)
+        db.session.commit()
+        return redirect(url_for('post', post_id=post_id))
+    return render_template('post.html', post=the_post, current_user=current_user)
 
 
-@socketio.on('post')  # emit when new post added
-def handle_post(post_data):
-    new_post = Post(title=post_data['title'], subtitle=post_data['subtitle'], user_id=current_user.id)
-    db.session.add(new_post)
-    db.session.commit()
-
-    # Emit a Socket.IO event for new posts
-    socketio.emit('post', {
-        'title': new_post.title,
-        'subtitle': new_post.subtitle,
-        'timestamp': new_post.timestamp.strftime('%Y-%m-%d %H:%M')
-    })
-
+# @app.route("/edit-post/<int:post_id>")
+# @login_required
+# def edit_post(post_id):
+#     if request.method == 'POST':
+#         new_post = Post(title=request.form['title'],
+#                         subtitle=request.form['subtitle'],
+#                         user_id=current_user.id)
+#         db.session.add(new_post)
+#         db.session.commit()
+#         return redirect(url_for('get_posts'))
+#     posts = Post.query.all()
+#     return render_template('all_posts.html', posts=posts, current_user=current_user, edit=True)
 
 # ***************************** COMMENTS *****************
 
+@app.route("/delete-comment/<int:comment_id>")
+@login_required
+def delete_comment(comment_id):
+    comment_to_delete = Comment.query.filter_by(id=comment_id).first()
+    post_id = comment_to_delete.post_id
+    if current_user.id != 1 and current_user.id != comment_to_delete.commenter.id:
+        return redirect(url_for('post', post_id=post_id))
+    db.session.delete(comment_to_delete)
+    db.session.commit()
+    return redirect(url_for('post', post_id=post_id))
 
-@socketio.on('comment')
-def handle_comment(comment_data):
-    post_id = comment_data.get('post_id')  # Use get to avoid KeyError
-    the_post = Post.query.get(post_id)
 
-    if the_post:
-        new_comment = Comment(content=comment_data['content'],
-                              parent_post=the_post,
-                              user_id=current_user.id,
-                              post_id=the_post.id)
-        db.session.add(new_comment)
-        db.session.commit()
-
-        # Emit a Socket.IO event for new comments
-        socketio.emit('comment', {
-            'content': new_comment.content,
-            'timestamp': new_comment.timestamp.strftime('%Y-%m-%d %H:%M'),
-            'post_id': post_id
-        })
+# @app.route("/edit-comment/<int:comment_id>", methods=['GET', 'POST'])
+# @login_required
+# def edit_comment(comment_id):
+#     requested_comment = Comment.query.get(comment_id)
+#     if current_user.id != 1 and current_user.id != requested_comment.comment_author.id:
+#         return redirect(url_for('get_all_posts'))
+#     post = requested_comment.parent_post
+#     form = CommentForm(
+#         comment=requested_comment.text
+#     )
+#     print(requested_comment.text)
+#     if form.validate_on_submit():
+#         requested_comment.text = form.comment.data
+#         db.session.commit()
+#         return redirect(url_for('show_post', post_id=post.id))
+#     return render_template("post.html", form=form, post=post, current_user=current_user, edit=True)
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    app.run(debug=True)
 
