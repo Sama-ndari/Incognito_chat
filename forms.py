@@ -8,7 +8,7 @@ class RegisterForm(FlaskForm):
                        render_kw={"placeholder": "Entrez votre Pseudo"})
     password = PasswordField(label="", validators=[DataRequired()],
                              render_kw={"placeholder": "Entrez votre Passcode"})
-    submit = SubmitField("Creer Compte")
+    submit = SubmitField("Créer Compte")
 
 
 class LoginForm(FlaskForm):
