@@ -1,5 +1,4 @@
 import os
-
 from flask import Flask, render_template, redirect, url_for, flash, abort, request
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
@@ -19,7 +18,7 @@ app.config['DEBUG'] = True
 
 # app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
-# # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
 Bootstrap(app)
@@ -37,7 +36,7 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200))
     subtitle = db.Column(db.String(250))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now())
 
     author = db.relationship('User', back_populates='posts')  # Include the User object
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -47,7 +46,7 @@ class Post(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(200))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now())
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     commenter = db.relationship('User', back_populates='comments')  # Include the User object
@@ -243,7 +242,9 @@ def get_posts():
     if request.method == 'POST':
         new_post = Post(title=request.form['title'],
                         subtitle=request.form['subtitle'],
-                        user_id=current_user.id)
+                        user_id=current_user.id,
+                        timestamp=datetime.now()
+                        )
 
         if db.session.query(Post).filter_by(
                 title=request.form['title'],
@@ -286,7 +287,8 @@ def post(post_id):
         new_comment = Comment(
             content=request.form['comment'],
             commenter=current_user,
-            parent_post=the_post
+            parent_post=the_post,
+            timestamp=datetime.now()
         )
         if db.session.query(Comment).filter_by(
                 content=request.form['comment'],
