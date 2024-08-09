@@ -61,7 +61,7 @@ with app.app_context():
 # to track users logins
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'  # Set the login view name
+login_manager.login_view = 'looser'  # Set the login view name
 
 
 # charger un utilisateur à partir de la base de données en utilisant son identifiant
@@ -345,6 +345,11 @@ def delete_comment(comment_id):
 #         db.session.commit()
 #         return redirect(url_for('show_post', post_id=post.id))
 #     return render_template("post.html", form=form, post=post, current_user=current_user, edit=True)
+
+
+@app.route("/stark")
+def looser():
+    return render_template("looser.html")
 
 
 if __name__ == '__main__':

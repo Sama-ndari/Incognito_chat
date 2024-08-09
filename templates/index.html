@@ -3,7 +3,7 @@
         <div class="row">
                  <main class="px-3">
                     {% if current_user.is_authenticated %}
-                      <h3>It's a pleasure to have you on board </h3>
+                      <h3>Un grand plaisir de vous accueillir {{current_user.name}} </h3>
                       {% if current_user.id == 1 %}
                         <a href="{{ url_for('contact') }}" class="btn btn-lg btn-white fw-bold border-gray bg-white">Security</a>
                       {% endif %}
