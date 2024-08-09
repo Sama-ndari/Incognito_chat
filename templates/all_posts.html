@@ -45,9 +45,12 @@
                                   </button>
                                   <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" href="{{ url_for('post', post_id=post.id) }}">Voir Post</a></li>
-                                    <li><a class="dropdown-item" href="#">Modifier</a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('delete_post', post_id=post.id) }}">Supprimer</a></li>
-                                    <li><a class="dropdown-item" href="#">Aimer</a></li>
+                                    {% if current_user == post.author or current_user.id == 1: %}
+                                      <li><a class="dropdown-item" href="#">Modifier</a></li>
+                                      <li><a class="dropdown-item" href="{{ url_for('delete_post', post_id=post.id) }}">Supprimer</a></li>
+                                    {% else %}
+                                      <li><a class="dropdown-item" href="#">Aimer</a></li>
+                                    {% endif %}
                                   </ul>
                                 </div>
                             </li>
