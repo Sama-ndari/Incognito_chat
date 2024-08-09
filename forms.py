@@ -18,7 +18,7 @@ class LoginForm(FlaskForm):
                              render_kw={"placeholder": "Entrez votre Passcode"})
     submit = SubmitField("Se connecter")
 
-import pytz
+# import pytz
 # from datetime import datetime
 # now = datetime.now()
 # print(f"Current time: {now.strftime('%I:%M %p')}")
