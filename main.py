@@ -19,7 +19,7 @@ app.config['DEBUG'] = True
 
 # app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
 Bootstrap(app)
@@ -62,6 +62,7 @@ with app.app_context():
 # to track users logins
 login_manager = LoginManager()
 login_manager.init_app(app)
+login_manager.login_view = 'login'  # Set the login view name
 
 
 # charger un utilisateur à partir de la base de données en utilisant son identifiant
@@ -117,13 +118,14 @@ def login():  # login
     return render_template("login.html", form=form)
 
 
-@app.route('/logout')  # logout
 @login_required
+@app.route('/logout')  # logout
 def logout():
     logout_user()
     return redirect(url_for('index'))
 
 
+@login_required
 @app.route("/contact")
 def contact():
     users = User.query.all()
@@ -260,7 +262,6 @@ def get_posts():
 @app.route("/delete_post/<int:post_id>")
 @login_required
 def delete_post(post_id):
-    print(post_id)
     post_author_id = Post.query.filter_by(id=post_id).first().user_id
     if post_author_id == current_user.id or current_user.id == 1:
         post_to_delete = Post.query.filter_by(id=post_id).first()

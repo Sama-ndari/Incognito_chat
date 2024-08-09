@@ -37,10 +37,13 @@
 
                               </button>
                               <ul class="dropdown-menu">
-                                 <li><a class="dropdown-item" href="#">Repondre</a></li>
-                                <li><a class="dropdown-item" href="#">Modifier</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('delete_comment', comment_id=comment.id) }}">Supprimer</a></li>
-                                <li><a class="dropdown-item" href="#">Aimer</a></li>
+                                <li><a class="dropdown-item" href="#">Repondre</a></li>
+                                {% if current_user == comment.commenter or current_user.id == 1: %}
+                                  <li><a class="dropdown-item" href="#">Modifier</a></li>
+                                  <li><a class="dropdown-item" href="{{ url_for('delete_comment', comment_id=comment.id) }}">Supprimer</a></li>
+                                {% else %}
+                                  <li><a class="dropdown-item" href="#">Aimer</a></li>
+                                {% endif %}
                               </ul>
                             </div>
                         </li>
