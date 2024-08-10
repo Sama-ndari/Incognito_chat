@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired
+from datetime import datetime, timedelta
 
 
 class RegisterForm(FlaskForm):
@@ -38,3 +39,11 @@ class LoginForm(FlaskForm):
 #         pass
 # else:
 #     print("Unable to determine your local time zone.")
+#
+#     Africa / Abidjan
+
+
+def now():
+    time = datetime.now()
+    time += timedelta(hours=2)
+    return time
