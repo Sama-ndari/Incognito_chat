@@ -2,7 +2,6 @@ import os
 from flask import Flask, render_template, redirect, url_for, flash, abort, request
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 from functools import wraps
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from forms import *
@@ -36,7 +35,7 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200))
     subtitle = db.Column(db.String(250))
-    timestamp = db.Column(db.DateTime, default=datetime.now())
+    timestamp = db.Column(db.DateTime, default=now())
 
     author = db.relationship('User', back_populates='posts')  # Include the User object
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -46,7 +45,7 @@ class Post(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(200))
-    timestamp = db.Column(db.DateTime, default=datetime.now())
+    timestamp = db.Column(db.DateTime, default=now())
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     commenter = db.relationship('User', back_populates='comments')  # Include the User object
@@ -243,7 +242,7 @@ def get_posts():
         new_post = Post(title=request.form['title'],
                         subtitle=request.form['subtitle'],
                         user_id=current_user.id,
-                        timestamp=datetime.now()
+                        timestamp=now()
                         )
 
         if db.session.query(Post).filter_by(
@@ -288,7 +287,7 @@ def post(post_id):
             content=request.form['comment'],
             commenter=current_user,
             parent_post=the_post,
-            timestamp=datetime.now()
+            timestamp=now()
         )
         if db.session.query(Comment).filter_by(
                 content=request.form['comment'],
