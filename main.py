@@ -11,13 +11,12 @@ from flask_bootstrap import Bootstrap
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['DEBUG'] = True
 # app.config['SESSION_PROTECTION'] = 'strong'
 
-# app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
-# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
 Bootstrap(app)
@@ -314,6 +313,7 @@ def post(post_id):
 #     posts = Post.query.all()
 #     return render_template('all_posts.html', posts=posts, current_user=current_user, edit=True)
 
+# app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 # ***************************** COMMENTS *****************
 
 @app.route("/delete-comment/<int:comment_id>")
