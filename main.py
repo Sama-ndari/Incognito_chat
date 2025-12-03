@@ -7,15 +7,15 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, cur
 from forms import *
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_bootstrap import Bootstrap
+from dotenv import load_dotenv
+from datetime import datetime
 
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-app.config['DEBUG'] = True
-# app.config['SESSION_PROTECTION'] = 'strong'
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['DEBUG'] = os.getenv('DEBUG', True)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///chat.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
@@ -34,9 +34,9 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200))
     subtitle = db.Column(db.String(250))
-    timestamp = db.Column(db.DateTime, default=now())
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-    author = db.relationship('User', back_populates='posts')  # Include the User object
+    author = db.relationship('User', back_populates='posts')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     comments = db.relationship('Comment', back_populates="parent_post", lazy=True)
 
@@ -44,13 +44,13 @@ class Post(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(200))
-    timestamp = db.Column(db.DateTime, default=now())
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    commenter = db.relationship('User', back_populates='comments')  # Include the User object
+    commenter = db.relationship('User', back_populates='comments')
 
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    parent_post = db.relationship('Post', back_populates='comments')  # Include the Post object
+    parent_post = db.relationship('Post', back_populates='comments')
 
 
 with app.app_context():
